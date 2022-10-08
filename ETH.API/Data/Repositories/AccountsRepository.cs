@@ -34,7 +34,7 @@ namespace ETH.API.Data.Repositories
                 return null;
             }
         }
-        
+
         public async Task<AccountsTableModel> GetAccountByValueAsync(decimal value)
         {
             try
@@ -67,19 +67,16 @@ namespace ETH.API.Data.Repositories
             }
             catch (Exception ex) { }
         }
-        
-        public async Task UpdateAccountAsync(AccountsTableModel address)
+
+        public async Task UpdateValueAccountAsync(string address, string value)
         {
             try
             {
                 var p = new DynamicParameters();
-                p.Add("id", address.Address);
-                p.Add("address", address.Address);
-                p.Add("label", address.Label);
-                p.Add("value", address.Value);
-                p.Add("state", address.State);
+                p.Add("address", address);
+                p.Add("value", value);
 
-                await _db.QueryAsync("UpdateAccount", p, commandType: CommandType.StoredProcedure);
+                await _db.QueryAsync("UpdateValueAccount", p, commandType: CommandType.StoredProcedure);
             }
             catch (Exception ex) { }
         }

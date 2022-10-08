@@ -10,10 +10,11 @@ using Transaction = Moralis.Web3Api.Models.Transaction;
 
 namespace ETH.API.Services
 {
+    //https://docs.moralis.io/reference/getwallettransactions
     public class MoralisService
     {
         private TransactionETHRepository _transactionETHRepository;
-        private  IWeb3Api _apiClient;
+        private IWeb3Api _apiClient;
         private string _moralisApiKey = "wR0Id2UZ9zA6jSQ4gUyxjW5weRUCOFIjQTmD8so8g30LYJez01oTbtTigdcwWPOa";
 
         public MoralisService(TransactionETHRepository transactionETHRepository)
@@ -30,7 +31,7 @@ namespace ETH.API.Services
             {
                 var lastTransaction = await _transactionETHRepository.GetTransactionETHAsync(address);
 
-                if(lastTransaction != null)
+                if (lastTransaction != null)
                 {
                     TransactionCollection collection = await _apiClient.Account.GetTransactions(address.ToLower(), ChainList.eth,
                     fromDate: lastTransaction.BlockTimestamp);
@@ -50,5 +51,35 @@ namespace ETH.API.Services
             }
             return new List<Transaction>();
         }
+
+        public async Task<string> GetBalance(string address)
+        {
+            try
+            {
+                var balance = await _apiClient.Account.GetNativeBalance(address.Trim().ToLower(), ChainList.eth);
+                return balance.Balance;
+            }
+            catch (Exception exp)
+            {
+                //error
+            }
+            return null;
+        }
+
+
+        public async Task<BlockTransaction> GetTransaction(string trHash)
+        {
+            try
+            {
+                BlockTransaction blockTransaction = await _apiClient.Native.GetTransaction(trHash, ChainList.eth);
+                return blockTransaction;
+            }
+            catch (Exception exp)
+            {
+                //error
+            }
+            return new BlockTransaction();
+        }
+
     }
 }
