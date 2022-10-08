@@ -7,7 +7,13 @@ namespace ETH.API.Models.Tables
         public long Id { get; set; }
         public string CurrencyAcronim { get; set; }
         public string TransactionId { get; set; }
+        /// <summary>
+        /// In ETH
+        /// </summary>
         public decimal Amount { get; set; }
+        /// <summary>
+        /// In ETH
+        /// </summary>
         public decimal TransactionFee { get; set; }
         public decimal? PlatformCommission { get; set; }
         public string FromAddress { get; set; }

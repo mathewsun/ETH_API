@@ -25,6 +25,12 @@ using System.Reflection.Emit;
 using Microsoft.OpenApi.Extensions;
 using ETH.API.Services;
 using Nethereum.ABI;
+using Nethereum.Contracts;
+using System.Threading;
+using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Asn1.Ocsp;
+using Nethereum.BlockchainProcessing.BlockStorage.Entities.Mapping;
+using ETH.API.Extensions;
 
 namespace ETH.API.Controllers
 {
@@ -38,6 +44,7 @@ namespace ETH.API.Controllers
         private TransactionETHRepository _transactionETHRepository;
         private IncomeTransactionRepository _incomeTransactionRepository;
         private MoralisService _moralisService;
+
 
         public ETHController(OutcomeTransactionRepository outcomeTransactionRepository,
             AccountsRepository accountRepository,
@@ -57,7 +64,7 @@ namespace ETH.API.Controllers
         [HttpGet]
         public async Task<string> GetNewAddress(string label)
         {
-            var web3 = new Web3();
+            var web3 = new Web3("http://192.168.95.129:8545");
             var address = await web3.Personal.NewAccount.SendRequestAsync(label);
 
             await _accountRepository.CreateAccountAsync(new AccountsTableModel
@@ -101,13 +108,13 @@ namespace ETH.API.Controllers
                                 {
                                     CurrencyAcronim = "ETH",
                                     TransactionId = transaction.Hash,
-                                    Amount = value,
-                                    TransactionFee = fee,
+                                    Amount = value.WeiToEth(),
+                                    TransactionFee = fee.WeiToEth(),
                                     PlatformCommission = null,
                                     FromAddress = transaction.FromAddress,
                                     ToAddress = transaction.ToAddress,
                                     CreatedDate = DateTime.Parse(transaction.BlockTimestamp),
-                                    Date = 0,
+                                    Date = 0,//todo
                                     UserId = userId,
                                     WalletId = wallet.Id,
                                 };
@@ -119,6 +126,8 @@ namespace ETH.API.Controllers
                             }
                         }
                     }
+                    var balance = await _moralisService.GetBalance(incomeWallet.Address);
+                    await _accountRepository.UpdateValueAccountAsync(incomeWallet.Address, balance);
                 }
             }
             catch (Exception ex)
@@ -138,7 +147,8 @@ namespace ETH.API.Controllers
                 AccountsTableModel account;
                 if (tr.FixedCommission.HasValue)
                 {
-                    account = await _accountRepository.GetAccountByValueAsync(tr.Value + tr.FixedCommission.Value);// берём адрес, учитывая комисию
+                    var resultValueToSearch = (tr.Value + tr.FixedCommission.Value).EthToWei();
+                    account = await _accountRepository.GetAccountByValueAsync(resultValueToSearch);// берём адрес, учитывая комисию
                 }
                 else
                 {
@@ -147,31 +157,26 @@ namespace ETH.API.Controllers
 
                 if (account != null)
                 {
-                    var accountWeb3 = new ManagedAccount(account.Address, account.Label);
-                    var web3 = new Web3(accountWeb3);
+                    var accountWeb3 = new ManagedAccount(account.Address.Trim(), account.Label.Trim());
+                    var web3 = new Web3(accountWeb3, "http://192.168.95.129:8545");
 
-                    var value = Web3.Convert.ToWei(new BigDecimal(tr.Value));
-                    var transactionHash = await web3.TransactionManager.SendTransactionAsync(account.Address, tr.ToAddress, new HexBigInteger(value));
-                    var trBlockchain = await web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transactionHash);
+                    var transaction = await web3.Eth.GetEtherTransferService().TransferEtherAndWaitForReceiptAsync(tr.ToAddress, tr.Value);
+                    var trBlockchain = await web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transaction.TransactionHash);
+                    decimal commission = trBlockchain.Gas.ToLong() * trBlockchain.GasPrice.ToLong();
 
-                    //decimal commission = Web3.Convert.FromWei(trBlockchain.Gas.Value * trBlockchain.GasPrice.Value);
                     var balance = await web3.Eth.GetBalance.SendRequestAsync(account.Address);
-                    var balanceETH = Web3.Convert.FromWei(balance.Value);
-                    decimal commission = account.Value - (balanceETH + tr.Value);
-
-                    account.Value -= (tr.Value + commission);
-
-                    await _accountRepository.UpdateAccountAsync(account); // сделать отдельную процедурку которая обновляет только баланс
+                    account.Value = balance.ToLong();
+                    await _accountRepository.UpdateValueAccountAsync(account.Address, account.Value.ToString());
 
                     return new ExecuteTransactionModel()
                     {
                         IsSuccess = true,
                         OutcomeTransactionState = (int)OutcomeTransactionStateEnum.Finished,
-                        CommissionBlockchain = commission,
-                        Value = tr.Value,
+                        CommissionBlockchain = commission.WeiToEth(),
+                        Value = tr.Value,// in eth
                         FromAddressBlockchain = account.Address,
                         ToAddressBlockchain = tr.ToAddress,
-                        TransactionHash = transactionHash,
+                        TransactionHash = transaction.TransactionHash,
                         ErrorText = null
                     };
                 }
