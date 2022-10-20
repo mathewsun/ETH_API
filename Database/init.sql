@@ -51,7 +51,8 @@ CREATE PROCEDURE [dbo].[CreateAccount]
 @address nvarchar(max),
 @label nvarchar(max),
 @value decimal(38,20) NULL,
-@state int
+@state int,
+@new_identity INT OUTPUT
 AS
 BEGIN
 INSERT INTO [dbo].[Accounts]
@@ -63,9 +64,8 @@ VALUES (@address
 		,@label
 		,@value
 		,@state)
-
+SET @new_identity = SCOPE_IDENTITY()
 END
-
 GO
 SET ANSI_NULLS ON
 GO
