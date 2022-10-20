@@ -64,11 +64,26 @@ VALUES (@address
 		,@label
 		,@value
 		,@state)
-
 SET @new_identity = SCOPE_IDENTITY()
-
 END
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[GetAccountByValue]
+@value nvarchar(200)
+AS
 
+SELECT TOP(1) [Id]
+			,[Address]
+			,[Label]
+			, CONVERT(decimal(38,12), [Value]) as Value
+			,[State]
+			,[LastUpdateDate]
+FROM [Accounts]
+WHERE [Value] >= @value
+ORDER BY [Value]
 GO
 SET ANSI_NULLS ON
 GO
@@ -177,5 +192,23 @@ END
 
 
 
+
+GO
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[UpdateValueAccount]
+@address nvarchar(max),
+@value decimal(38,20) NULL
+AS
+BEGIN
+	UPDATE Accounts
+	SET 
+		Value = @value,
+		LastUpdateDate = GETDATE()
+	WHERE Address = @address;
+
+END
 
 GO
