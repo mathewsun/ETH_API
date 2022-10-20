@@ -1,5 +1,6 @@
 USE [ETH_API]
 GO
+/****** Object:  Table [dbo].[Accounts]    Script Date: 10/20/2022 16:55:20 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -17,6 +18,7 @@ CREATE TABLE [dbo].[Accounts](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
+/****** Object:  Table [dbo].[TransactionETH]    Script Date: 10/20/2022 16:55:20 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -43,6 +45,7 @@ CREATE TABLE [dbo].[TransactionETH](
 GO
 ALTER TABLE [dbo].[Accounts] ADD  CONSTRAINT [DF_Accounts_LastUpdateDate]  DEFAULT (getdate()) FOR [LastUpdateDate]
 GO
+/****** Object:  StoredProcedure [dbo].[CreateAccount]    Script Date: 10/20/2022 16:55:20 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -51,8 +54,7 @@ CREATE PROCEDURE [dbo].[CreateAccount]
 @address nvarchar(max),
 @label nvarchar(max),
 @value decimal(38,20) NULL,
-@state int,
-@new_identity INT OUTPUT
+@state int
 AS
 BEGIN
 INSERT INTO [dbo].[Accounts]
@@ -65,11 +67,29 @@ VALUES (@address
 		,@value
 		,@state)
 
-SET @new_identity = SCOPE_IDENTITY()
-
 END
 
 GO
+/****** Object:  StoredProcedure [dbo].[GetAccountByValue]    Script Date: 10/20/2022 16:55:20 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[GetAccountByValue]
+@value nvarchar(200)
+AS
+
+SELECT TOP(1) [Id]
+			,[Address]
+			,[Label]
+			, CONVERT(decimal(38,12), [Value]) as Value
+			,[State]
+			,[LastUpdateDate]
+FROM [Accounts]
+WHERE [Value] >= @value
+ORDER BY [Value]
+GO
+/****** Object:  StoredProcedure [dbo].[GetLastTransaction]    Script Date: 10/20/2022 16:55:20 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -82,6 +102,7 @@ SELECT TOP(1) * FROM TransactionETH
 WHERE TransactionETH.ToAddress = @address
 ORDER BY TransactionETH.BlockTimestamp desc
 GO
+/****** Object:  StoredProcedure [dbo].[InsertOrUpdateTransaction]    Script Date: 10/20/2022 16:55:20 ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -177,5 +198,24 @@ END
 
 
 
+
+GO
+/****** Object:  StoredProcedure [dbo].[UpdateValueAccount]    Script Date: 10/20/2022 16:55:20 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+CREATE PROCEDURE [dbo].[UpdateValueAccount]
+@address nvarchar(max),
+@value decimal(38,20) NULL
+AS
+BEGIN
+	UPDATE Accounts
+	SET 
+		Value = @value,
+		LastUpdateDate = GETDATE()
+	WHERE Address = @address;
+
+END
 
 GO

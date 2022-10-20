@@ -107,7 +107,7 @@ namespace ETH.API.Controllers
                                 var incomeTransaction = new IncomeTransactionTableModel()
                                 {
                                     CurrencyAcronim = "ETH",
-                                    TransactionId = transaction.Hash,
+                                    TransactionHash = transaction.Hash,
                                     Amount = value.WeiToEth(),
                                     TransactionFee = fee.WeiToEth(),
                                     PlatformCommission = null,

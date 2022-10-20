@@ -6,7 +6,7 @@ namespace ETH.API.Models.Tables
     {
         public long Id { get; set; }
         public string CurrencyAcronim { get; set; }
-        public string TransactionId { get; set; }
+        public string TransactionHash { get; set; }
         /// <summary>
         /// In ETH
         /// </summary>
