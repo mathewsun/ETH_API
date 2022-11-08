@@ -64,7 +64,7 @@ namespace ETH.API.Controllers
         [HttpGet]
         public async Task<string> GetNewAddress(string label)
         {
-            var web3 = new Web3("http://192.168.95.129:8545");
+            var web3 = new Web3("http://192.168.1.86:8545");
             var address = await web3.Personal.NewAccount.SendRequestAsync(label);
 
             await _accountRepository.CreateAccountAsync(new AccountsTableModel
@@ -158,7 +158,7 @@ namespace ETH.API.Controllers
                 if (account != null)
                 {
                     var accountWeb3 = new ManagedAccount(account.Address.Trim(), account.Label.Trim());
-                    var web3 = new Web3(accountWeb3, "http://192.168.95.129:8545");
+                    var web3 = new Web3(accountWeb3, "http://192.168.1.86:8545");
 
                     var transaction = await web3.Eth.GetEtherTransferService().TransferEtherAndWaitForReceiptAsync(tr.ToAddress, tr.Value);
                     var trBlockchain = await web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transaction.TransactionHash);
