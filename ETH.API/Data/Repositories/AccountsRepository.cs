@@ -62,6 +62,7 @@ namespace ETH.API.Data.Repositories
                 p.Add("label", address.Label);
                 p.Add("value", address.Value);
                 p.Add("state", address.State);
+                p.Add("new_identity", dbType: DbType.Int32, direction: ParameterDirection.Output);
 
                 await _db.QueryAsync("CreateAccount", p, commandType: CommandType.StoredProcedure);
             }
