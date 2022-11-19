@@ -1,4 +1,4 @@
-﻿using ETH.API.Data.Repositories;
+using ETH.API.Data.Repositories;
 using ETH.API.Models;
 using ETH.API.Models.Enum;
 using ETH.API.Models.Tables;
@@ -160,8 +160,22 @@ namespace ETH.API.Controllers
                     var accountWeb3 = new ManagedAccount(account.Address.Trim(), account.Label.Trim());
                     var web3 = new Web3(accountWeb3, "http://192.168.1.86:8545");
 
-                    var transaction = await web3.Eth.GetEtherTransferService().TransferEtherAndWaitForReceiptAsync(tr.ToAddress, tr.Value);
-                    var trBlockchain = await web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transaction.TransactionHash);
+                    //var transaction = await web3.Eth.GetEtherTransferService().TransferEtherAndWaitForReceiptAsync(tr.ToAddress, tr.Value);
+
+                    var transactionHash = await web3.Personal.SignAndSendTransaction.SendRequestAsync(new TransactionInput()
+                    {
+                        From = account.Address,
+                        To = tr.ToAddress,
+                        GasPrice = new HexBigInteger(new BigInteger(20000000000)),
+                        Gas = new HexBigInteger(new BigInteger(21000)),
+                        Value = new HexBigInteger(new BigInteger(tr.Value.EthToWei())),
+                        Data = ""
+                    },
+                    account.Label);
+
+
+                    var trBlockchain = await web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transactionHash);
+                    //var trBlockchain = await web3.Eth.Transactions.GetTransactionByHash.SendRequestAsync(transaction.TransactionHash);
                     decimal commission = trBlockchain.Gas.ToLong() * trBlockchain.GasPrice.ToLong();
 
                     var balance = await web3.Eth.GetBalance.SendRequestAsync(account.Address);
@@ -176,7 +190,7 @@ namespace ETH.API.Controllers
                         Value = tr.Value,// in eth
                         FromAddressBlockchain = account.Address,
                         ToAddressBlockchain = tr.ToAddress,
-                        TransactionHash = transaction.TransactionHash,
+                        TransactionHash = transactionHash,
                         ErrorText = null
                     };
                 }
