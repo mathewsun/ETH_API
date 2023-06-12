@@ -65,5 +65,21 @@ namespace ETH.API.Data.Repositories
             }
             catch (Exception ex) { return null; }
         }
+
+        public async Task<WalletTableModel> CreateUserWalletAsync(WalletTableModel wallet)
+        {
+            var p = new DynamicParameters();
+            p.Add("userId", wallet.UserId);
+            p.Add("address", wallet.Address);
+            p.Add("currencyAcronim", wallet.CurrencyAcronim);
+            p.Add("value", wallet.Value);
+            p.Add("new_identity", dbType: DbType.Int32, direction: ParameterDirection.Output);
+
+            await _db.QueryAsync<int>("CreateUserWallet", p, commandType: CommandType.StoredProcedure);
+
+            wallet.Id = p.Get<int>("new_identity");
+
+            return wallet;
+        }
     }
 }

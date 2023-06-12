@@ -32,6 +32,7 @@ namespace ETH.API
             services.AddTransient<IncomeTransactionRepository>();
             services.AddTransient<TransactionETHRepository>();
             services.AddTransient<WalletRepository>();
+            services.AddTransient<RequestService>();
             services.AddTransient<MoralisService>();
         }
 

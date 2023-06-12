@@ -44,14 +44,15 @@ namespace ETH.API.Controllers
         private TransactionETHRepository _transactionETHRepository;
         private IncomeTransactionRepository _incomeTransactionRepository;
         private MoralisService _moralisService;
-
+        private RequestService _requestService;
 
         public ETHController(OutcomeTransactionRepository outcomeTransactionRepository,
             AccountsRepository accountRepository,
             WalletRepository walletRepository,
             TransactionETHRepository transactionETHRepository,
             IncomeTransactionRepository incomeTransactionRepository,
-            MoralisService moralisService)
+            MoralisService moralisService,
+            RequestService requestService)
         {
             _outcomeTransactionRepository = outcomeTransactionRepository;
             _accountRepository = accountRepository;
@@ -59,23 +60,13 @@ namespace ETH.API.Controllers
             _transactionETHRepository = transactionETHRepository;
             _moralisService = moralisService;
             _incomeTransactionRepository = incomeTransactionRepository;
+            _requestService = requestService;
         }
 
         [HttpGet]
         public async Task<string> GetNewAddress(string label)
         {
-            var web3 = new Web3("http://192.168.1.86:8545");
-            var address = await web3.Personal.NewAccount.SendRequestAsync(label);
-
-            await _accountRepository.CreateAccountAsync(new AccountsTableModel
-            {
-                Address = address,
-                Label = label,
-                Value = 0,
-                State = (int)AccountState.Created
-            });
-
-            return address;
+            return await _requestService.GetNewAddress(label);
         }
 
         [HttpGet]
@@ -94,22 +85,36 @@ namespace ETH.API.Controllers
                         {
                             var operationResult = await _transactionETHRepository.SaveTransactionETHAsync(transaction);
 
-                            var value = decimal.Parse(transaction.Value);
+                            decimal value = decimal.Parse(transaction.Value);
+
+                            value = value / 1000000000000000000;
 
                             if (value > 0)
                             {
                                 var wallet = await _walletRepository.GetUserWalletAsync(userId, "ETH");
 
+                                if (wallet == null)
+                                {
+                                    wallet = await _walletRepository.CreateUserWalletAsync(new WalletTableModel()
+                                    {
+                                        UserId = userId,
+                                        CurrencyAcronim = "ETH",
+                                        Value = 0,
+                                        Address = await _requestService.GetNewAddress(userId)
+                                    });
+                                }
+
                                 decimal gasPrice = decimal.Parse(transaction.GasPrice);
                                 decimal gas = decimal.Parse(transaction.Gas);
                                 decimal fee = gasPrice * gas;
+                                fee = fee / 1000000000000000000;
 
                                 var incomeTransaction = new IncomeTransactionTableModel()
                                 {
                                     CurrencyAcronim = "ETH",
                                     TransactionHash = transaction.Hash,
-                                    Amount = value.WeiToEth(),
-                                    TransactionFee = fee.WeiToEth(),
+                                    Amount = value,
+                                    TransactionFee = fee,
                                     PlatformCommission = null,
                                     FromAddress = transaction.FromAddress,
                                     ToAddress = transaction.ToAddress,
@@ -126,8 +131,11 @@ namespace ETH.API.Controllers
                             }
                         }
                     }
-                    var balance = await _moralisService.GetBalance(incomeWallet.Address);
-                    await _accountRepository.UpdateValueAccountAsync(incomeWallet.Address, balance);
+                    var moralisBalance = await _moralisService.GetBalance(incomeWallet.Address);
+                    decimal realBalance = Convert.ToDecimal(moralisBalance);
+                    realBalance = realBalance / 1000000000000000000;
+
+                    await _accountRepository.UpdateValueAccountAsync(incomeWallet.Address, realBalance);
                 }
             }
             catch (Exception ex)
@@ -180,7 +188,7 @@ namespace ETH.API.Controllers
 
                     var balance = await web3.Eth.GetBalance.SendRequestAsync(account.Address);
                     account.Value = balance.ToLong();
-                    await _accountRepository.UpdateValueAccountAsync(account.Address, account.Value.ToString());
+                    await _accountRepository.UpdateValueAccountAsync(account.Address, account.Value);
 
                     return new ExecuteTransactionModel()
                     {

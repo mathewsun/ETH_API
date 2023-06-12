@@ -69,7 +69,7 @@ namespace ETH.API.Data.Repositories
             catch (Exception ex) { }
         }
 
-        public async Task UpdateValueAccountAsync(string address, string value)
+        public async Task UpdateValueAccountAsync(string address, decimal value)
         {
             try
             {
